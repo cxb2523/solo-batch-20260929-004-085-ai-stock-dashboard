@@ -1,6 +1,13 @@
-streamlit>=1.28.0
-yfinance>=0.2.18
 pandas>=1.5.0
 numpy>=1.24.0
-plotly>=5.15.0
-scikit-learn>=1.3.0
+PyYAML>=6.0
+fastapi>=0.110
+uvicorn>=0.29
+
+# Optional: live Yahoo Finance data. When absent or rate-limited/offline the
+# dashboard transparently falls back to fixtures/sample_prices.csv.
+yfinance>=0.2.18
+
+# Test-only
+pytest>=8.0
+httpx>=0.27

@@ -60,15 +60,62 @@ cd ai-stock-dashboard
 pip install -r requirements.txt
 ```
 
-3. **Run the application**
+3. **Run the dashboard service**
 ```bash
-streamlit run stock_dashboard.py
+uvicorn app:app --reload
 ```
 
 4. **Open your browser**
 ```
-Navigate to http://localhost:8501
+Navigate to http://127.0.0.1:8000
 ```
+
+The home page renders two tables: the **effective configuration** (each key with
+its provenance: `env` / `yaml` / `default`) and the **latest indicators** per
+ticker. `GET /config/effective` returns the same snapshot as JSON, including the
+snapshot `fingerprint` and merge `diagnostics`.
+
+### Configuration layer
+
+All tunables live in `config.yaml` (ticker list, indicator windows/thresholds,
+cache TTL, datasource switches):
+
+```yaml
+tickers: [AAPL, MSFT, GOOG]          # merged BY INDEX with built-in defaults
+indicator_windows:
+  sma_short: 20                       # change to 50 -> indicators follow live
+cache: {ttl_seconds: 300}
+datasources: {yfinance_enabled: true, local_fixture_enabled: true}
+```
+
+Precedence is **env > yaml > built-in defaults**:
+
+- env names are the dotted YAML path, upper-cased with `__` separators, e.g.
+  `INDICATOR_WINDOWS__SMA_SHORT=50`, `CACHE__TTL_SECONDS=60`,
+  `TICKERS=AAPL,TSLA,NVDA`, `DATASOURCES__YFINANCE_ENABLED=false`;
+- **unset** env var = no override (yaml/default applies); **empty string**
+  (`INDICATOR_WINDOWS__SMA_SHORT=`) = explicit reset to the built-in default;
+- scalars replace wholesale; lists merge item-by-item by index and out-of-range
+  override indices are dropped with a diagnostic; invalid values fall back to
+  defaults instead of raising;
+- other modules only read a deep-frozen `ConfigSnapshot`. `config.yaml` is
+  hot-reloaded by mtime and snapshot swaps are atomic, so a calculation and the
+  rendered config table always share one generation;
+- cache keys are prefixed with the snapshot fingerprint, so editing a threshold
+  starts a fresh cache namespace — results before/after `POST /cache/clear`
+  stay identical.
+
+When `yfinance` is disabled, missing, rate-limited, or the machine is offline,
+fetching degrades to the bundled `fixtures/sample_prices.csv`.
+
+### Tests
+
+```bash
+python -m pytest -q
+```
+
+The offline suite monkeypatches the datasource to return a fixed `DataFrame` and
+walks fetch -> calculate -> render, asserting offline fallback never errors.
 
 ![ML Predictions](screenshots/ml_predictions.jpg)
 

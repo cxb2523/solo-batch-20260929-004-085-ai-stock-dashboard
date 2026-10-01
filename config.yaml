@@ -1,0 +1,44 @@
+# Stock dashboard configuration.
+#
+# Precedence (highest wins):
+#   environment variables  >  this file  >  built-in defaults
+#
+# Environment variable names are the dotted YAML path upper-cased with nested
+# keys joined by "__"; list values are comma separated:
+#   tickers                       -> TICKERS=AAPL,TSLA,NVDA
+#   indicator_windows.sma_short   -> INDICATOR_WINDOWS__SMA_SHORT=50
+#   cache.ttl_seconds             -> CACHE__TTL_SECONDS=60
+#   datasources.yfinance_enabled  -> DATASOURCES__YFINANCE_ENABLED=false
+#
+# Env semantics:
+#   unset        -> no override (this file / defaults shine through)
+#   set to ""    -> explicitly reset the key to its built-in default
+#   invalid      -> fall back to the built-in default, never raise
+
+# Watch list. Lists merge by INDEX with the built-in default
+# [AAPL, MSFT, GOOG]: items below replace positions 0..2; any extra item
+# beyond the base-list length is dropped with a diagnostic.
+tickers:
+  - AAPL
+  - MSFT
+  - GOOG
+
+# Indicator window / threshold settings (positive integers >= 2).
+indicator_windows:
+  sma_short: 20
+  sma_long: 50
+  rsi_window: 14
+  rsi_oversold: 30
+  rsi_overbought: 70
+
+cache:
+  # Seconds a computed per-ticker result stays valid. Cache keys carry the
+  # config snapshot fingerprint, so changing any setting above starts a fresh
+  # cache namespace automatically.
+  ttl_seconds: 300
+
+datasources:
+  # Live Yahoo Finance fetch (yfinance). When false, unavailable, or failing
+  # offline, the dashboard degrades to the bundled local CSV fixture.
+  yfinance_enabled: true
+  local_fixture_enabled: true
