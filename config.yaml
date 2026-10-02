@@ -1,0 +1,48 @@
+# Stock dashboard configuration.
+#
+# Precedence: environment variables (highest) > this file > built-in defaults.
+#
+# Environment variable name for a leaf is SD_ plus the dotted path in upper
+# snake case, e.g.
+#   indicators.rsi_window      -> SD_INDICATORS_RSI_WINDOW
+#   cache.ttl_seconds          -> SD_CACHE_TTL_SECONDS
+#   sources.yfinance.enabled   -> SD_SOURCES_YFINANCE_ENABLED
+# Lists use comma-separated values (SD_TICKERS=AAPL,MSFT); an explicitly empty
+# string clears a list. An unset variable means "no override".
+
+tickers:
+  - AAPL
+  - MSFT
+  - GOOGL
+
+indicators:
+  sma_windows: [20, 50, 200]   # list: merged with defaults index by index
+  ema_spans: [12, 26]
+  rsi_window: 14
+  macd_signal: 9
+  volume_window: 20
+  bollinger:
+    window: 20
+    std: 2.0
+  atr_window: 14
+  stoch:
+    k_window: 14
+    d_window: 3
+
+cache:
+  ttl_seconds: 300
+  max_entries: 128
+
+sources:
+  yfinance:
+    enabled: true
+  local_fixture:
+    enabled: true
+    path: tests/fixtures/sample_prices.csv
+
+data:
+  period: 1y
+
+server:
+  host: 127.0.0.1
+  port: 8000

@@ -11,6 +11,70 @@ A comprehensive, AI-powered stock market dashboard that combines advanced techni
 
 ![Main Dashboard](screenshots/main_dashboard.jpg)
 
+## ⚙️ Config-driven service (`config.yaml`)
+
+The service layer (`app.py`, served via `uvicorn app:app`) reads **all** of
+ticker lists, indicator windows/thresholds, cache TTL and data-source switches
+from `config.yaml`, with environment variables on top:
+
+```
+precedence:  environment variables  >  config.yaml  >  built-in defaults
+```
+
+| Config leaf | Environment variable |
+|---|---|
+| `tickers` | `SD_TICKERS` (comma separated) |
+| `indicators.sma_windows` | `SD_INDICATORS_SMA_WINDOWS` |
+| `indicators.rsi_window` | `SD_INDICATORS_RSI_WINDOW` |
+| `indicators.bollinger.std` | `SD_INDICATORS_BOLLINGER_STD` |
+| `cache.ttl_seconds` | `SD_CACHE_TTL_SECONDS` |
+| `cache.max_entries` | `SD_CACHE_MAX_ENTRIES` |
+| `sources.yfinance.enabled` | `SD_SOURCES_YFINANCE_ENABLED` |
+| `sources.local_fixture.path` | `SD_SOURCES_LOCAL_FIXTURE_PATH` |
+| `data.period` / `server.host` / `server.port` | `SD_DATA_PERIOD` / `SD_SERVER_HOST` / `SD_SERVER_PORT` |
+
+Merge rules (`config_loader.py:load_config`):
+
+- **Scalars** are replaced wholesale by the higher-precedence layer.
+- **Lists** are merged item by item by index; out-of-range indices are dropped
+  and recorded as diagnostics (they can't grow the list).
+- **Invalid values never raise** — the leaf falls back to the lower layer and a
+  diagnostic is emitted (visible on the home page and in `/config/effective`).
+- An **unset** env var means "no override"; an env var explicitly set to an
+  empty string **clears a list** (scalar empty values are diagnosed/ignored).
+- Every other module receives one deep-frozen snapshot
+  (`FrozenDict`/tuples) — it cannot mutate config.
+
+The `ConfigStore` watches the yaml **mtime** and atomically swaps snapshots on
+change; one request always reads a single consistent snapshot. Cache entries
+are keyed by the snapshot fingerprint, so changing e.g.
+`sma_windows: [20, ...]` to `[50, ...]` immediately changes the computed
+indicators without stale entries.
+
+Run:
+
+```bash
+uvicorn app:app                       # http://127.0.0.1:8000
+# offline demo (fixture fallback, no network):
+SD_SOURCES_YFINANCE_ENABLED=false uvicorn app:app
+```
+
+Endpoints:
+
+- `/` — effective-config table (with per-key source `default|yaml|env`) and
+  latest-indicators table
+- `/config/effective` — full effective config, sources, fingerprint, diagnostics
+- `/metrics/latest` — latest indicator row per ticker
+- `/healthz` — liveness + fingerprint
+
+If yfinance is unreachable, fetches degrade to the committed local fixture
+(`tests/fixtures/sample_prices.csv`) without erroring. Tests are fully
+offline:
+
+```bash
+python -m pytest -q
+```
+
 ## ✨ Features
 
 ### 🤖 **Artificial Intelligence**
